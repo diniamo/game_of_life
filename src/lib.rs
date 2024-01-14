@@ -48,9 +48,9 @@ pub fn step(grid: &mut Grid<bool>) -> bool {
             // 5, 6, 7
             #[rustfmt::skip]
             let neighbours = [
-                safe_index_grid(&grid, sx - 1, sy - 1), safe_index_grid(&grid, sx, sy - 1), safe_index_grid(&grid, sx + 1, sy - 1),
-                safe_index_grid(&grid, sx - 1, sy),                                         safe_index_grid(&grid, sx + 1, sy),
-                safe_index_grid(&grid, sx - 1, sy + 1), safe_index_grid(&grid, sx, sy + 1), safe_index_grid(&grid, sx + 1, sy + 1),
+                safe_index_grid(grid, sx - 1, sy - 1), safe_index_grid(grid, sx, sy - 1), safe_index_grid(grid, sx + 1, sy - 1),
+                safe_index_grid(grid, sx - 1, sy),                                        safe_index_grid(grid, sx + 1, sy),
+                safe_index_grid(grid, sx - 1, sy + 1), safe_index_grid(grid, sx, sy + 1), safe_index_grid(grid, sx + 1, sy + 1),
             ];
 
             let live_neighbours = neighbours

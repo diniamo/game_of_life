@@ -10,17 +10,20 @@ use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 use sdl2::{event::Event, pixels::Color};
 
-const RANDOM_GRID: bool = true;
-const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
+const RANDOM_GRID: bool = false;
+const RG_WIDTH: usize = 80;
+const RG_HEIGHT: usize = 60;
 
-const BORDER_SIZE: u32 = 0;
+const BORDER_SIZE: u32 = 1;
 const BORDER_SIZE_I: i32 = BORDER_SIZE as i32;
-const PIXEL_SIZE: u32 = 1;
+const PIXEL_SIZE: u32 = 10;
 const PIXEL_SIZE_I: i32 = PIXEL_SIZE as i32;
+
+const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
 
 fn main() {
     let mut grid = if RANDOM_GRID {
-        random_grid(1920, 1080)
+        random_grid(RG_WIDTH, RG_HEIGHT)
     } else {
         parse_goln(res::GLIDER)
     };
