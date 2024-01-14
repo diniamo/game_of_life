@@ -21,13 +21,13 @@ const PIXEL_SIZE_I: i32 = PIXEL_SIZE as i32;
 
 const EDGE_CASE_METHOD: EdgeCaseMethod = EdgeCaseMethod::Torodial;
 
-const UPDATE_INTERVAL: Duration = Duration::from_millis(10);
+const UPDATE_INTERVAL: Duration = Duration::from_millis(1000);
 
 fn main() {
     let mut grid = if RANDOM_GRID {
         random_grid(RG_WIDTH, RG_HEIGHT)
     } else {
-        parse_goln(res::GLIDER)
+        parse_goln(res::CROSSHAIR)
     };
     let mut last_update = Instant::now();
 
