@@ -13,14 +13,14 @@ use sdl2::{event::Event, pixels::Color};
 const RANDOM_GRID: bool = true;
 const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
 
-const BORDER_SIZE: u32 = 1;
+const BORDER_SIZE: u32 = 0;
 const BORDER_SIZE_I: i32 = BORDER_SIZE as i32;
-const PIXEL_SIZE: u32 = 10;
+const PIXEL_SIZE: u32 = 1;
 const PIXEL_SIZE_I: i32 = PIXEL_SIZE as i32;
 
 fn main() {
     let mut grid = if RANDOM_GRID {
-        random_grid(80, 60)
+        random_grid(1920, 1080)
     } else {
         parse_goln(res::GLIDER)
     };
@@ -31,8 +31,8 @@ fn main() {
 
     let cols = grid.cols() as u32;
     let rows = grid.rows() as u32;
-    let width = cols as u32 * PIXEL_SIZE + cols * BORDER_SIZE + BORDER_SIZE;
-    let height = rows as u32 * PIXEL_SIZE + rows * BORDER_SIZE + BORDER_SIZE;
+    let width = cols * PIXEL_SIZE + cols * BORDER_SIZE + BORDER_SIZE;
+    let height = rows * PIXEL_SIZE + rows * BORDER_SIZE + BORDER_SIZE;
     let window = video_subsystem
         .window("Game of Life", width, height)
         .position_centered()
@@ -68,9 +68,7 @@ fn main() {
             }
         }
 
-        if !paused && last_update.elapsed() >= UPDATE_INTERVAL {
-            grid = step(grid);
-
+        if !paused && last_update.elapsed() >= UPDATE_INTERVAL && step(&mut grid) {
             if let Err(e) = do_draw(&mut canvas, &border_texture, &grid) {
                 println!("Failed to draw, terminating: {e}");
                 break 'game_loop;
@@ -110,9 +108,7 @@ fn do_draw(
         }
     }
 
-    canvas.set_draw_color(Color::WHITE);
     canvas.present();
-
     Ok(())
 }
 

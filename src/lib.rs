@@ -35,8 +35,8 @@ fn map_split_once_to_usize(tuple: (&str, &str)) -> (usize, usize) {
     )
 }
 
-pub fn step(grid: Grid<bool>) -> Grid<bool> {
-    let mut new_grid = Grid::new(grid.rows(), grid.cols());
+pub fn step(grid: &mut Grid<bool>) -> bool {
+    let mut flips: Vec<(usize, usize)> = Vec::new();
 
     for y in 0..grid.rows() {
         for x in 0..grid.cols() {
@@ -58,17 +58,24 @@ pub fn step(grid: Grid<bool>) -> Grid<bool> {
                 .filter(|cell| cell.unwrap_or(false))
                 .count();
 
-            if grid[(y, x)] && !(2..=3).contains(&live_neighbours) {
-                new_grid[(y, x)] = false;
+            if grid[(y, x)] {
+                if !(2..=3).contains(&live_neighbours) {
+                    flips.push((x, y));
+                }
             } else if live_neighbours == 3 {
-                new_grid[(y, x)] = true;
-            } else {
-                new_grid[(y, x)] = grid[(y, x)];
+                flips.push((x, y));
             }
         }
     }
 
-    new_grid
+    if flips.is_empty() {
+        false
+    } else {
+        for flip in flips {
+            grid[(flip.1, flip.0)] = !grid[(flip.1, flip.0)]
+        }
+        true
+    }
 }
 
 fn safe_index_grid<T: Copy>(grid: &Grid<T>, x: i64, y: i64) -> Option<T> {
