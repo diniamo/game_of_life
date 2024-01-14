@@ -2,7 +2,7 @@
 
 use std::time::{Duration, Instant};
 
-use game_of_life::{parse_goln, random_grid, res, step};
+use game_of_life::{parse_goln, random_grid, res, step, EdgeCaseMethod};
 use grid::Grid;
 use sdl2::keyboard::Keycode;
 use sdl2::rect::Rect;
@@ -19,7 +19,9 @@ const BORDER_SIZE_I: i32 = BORDER_SIZE as i32;
 const PIXEL_SIZE: u32 = 10;
 const PIXEL_SIZE_I: i32 = PIXEL_SIZE as i32;
 
-const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
+const EDGE_CASE_METHOD: EdgeCaseMethod = EdgeCaseMethod::Torodial;
+
+const UPDATE_INTERVAL: Duration = Duration::from_millis(10);
 
 fn main() {
     let mut grid = if RANDOM_GRID {
@@ -71,7 +73,8 @@ fn main() {
             }
         }
 
-        if !paused && last_update.elapsed() >= UPDATE_INTERVAL && step(&mut grid) {
+        if !paused && last_update.elapsed() >= UPDATE_INTERVAL && step(&mut grid, &EDGE_CASE_METHOD)
+        {
             if let Err(e) = do_draw(&mut canvas, &border_texture, &grid) {
                 println!("Failed to draw, terminating: {e}");
                 break 'game_loop;

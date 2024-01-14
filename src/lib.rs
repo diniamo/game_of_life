@@ -2,6 +2,11 @@ use grid::Grid;
 
 pub mod res;
 
+pub enum EdgeCaseMethod {
+    AssumeDead,
+    Torodial,
+}
+
 pub fn random_grid(width: usize, height: usize) -> Grid<bool> {
     let mut grid = Grid::new(height, width);
     for cell in grid.iter_mut() {
@@ -35,28 +40,23 @@ fn map_split_once_to_usize(tuple: (&str, &str)) -> (usize, usize) {
     )
 }
 
-pub fn step(grid: &mut Grid<bool>) -> bool {
+pub fn step(grid: &mut Grid<bool>, method: &EdgeCaseMethod) -> bool {
     let mut flips: Vec<(usize, usize)> = Vec::new();
 
     for y in 0..grid.rows() {
         for x in 0..grid.cols() {
-            let sx = x as i64;
-            let sy = y as i64;
+            let sx = x as isize;
+            let sy = y as isize;
 
             // 0, 1, 2
             // 3,    4
             // 5, 6, 7
             #[rustfmt::skip]
-            let neighbours = [
-                safe_index_grid(grid, sx - 1, sy - 1), safe_index_grid(grid, sx, sy - 1), safe_index_grid(grid, sx + 1, sy - 1),
-                safe_index_grid(grid, sx - 1, sy),                                        safe_index_grid(grid, sx + 1, sy),
-                safe_index_grid(grid, sx - 1, sy + 1), safe_index_grid(grid, sx, sy + 1), safe_index_grid(grid, sx + 1, sy + 1),
-            ];
-
-            let live_neighbours = neighbours
-                .iter()
-                .filter(|cell| cell.unwrap_or(false))
-                .count();
+            let live_neighbours = [
+                safe_index_grid(grid, method, sx - 1, sy - 1), safe_index_grid(grid, method, sx, sy - 1), safe_index_grid(grid, method, sx + 1, sy - 1),
+                safe_index_grid(grid, method, sx - 1, sy),                                                safe_index_grid(grid, method, sx + 1, sy),
+                safe_index_grid(grid, method, sx - 1, sy + 1), safe_index_grid(grid, method, sx, sy + 1), safe_index_grid(grid, method, sx + 1, sy + 1),
+            ].iter().filter(|cell| **cell).count();
 
             if grid[(y, x)] {
                 if !(2..=3).contains(&live_neighbours) {
@@ -78,10 +78,35 @@ pub fn step(grid: &mut Grid<bool>) -> bool {
     }
 }
 
-fn safe_index_grid<T: Copy>(grid: &Grid<T>, x: i64, y: i64) -> Option<T> {
-    if x < 0 || y < 0 || (x as usize) >= grid.cols() || (y as usize) >= grid.rows() {
-        None
-    } else {
-        Some(grid[(y as usize, x as usize)])
+fn safe_index_grid(grid: &Grid<bool>, method: &EdgeCaseMethod, x: isize, y: isize) -> bool {
+    match method {
+        EdgeCaseMethod::AssumeDead => {
+            if x < 0 || y < 0 || (x as usize) >= grid.cols() || (y as usize) >= grid.rows() {
+                false
+            } else {
+                grid[(y as usize, x as usize)]
+            }
+        }
+        EdgeCaseMethod::Torodial => {
+            let cols = grid.cols() as isize;
+            let rows = grid.rows() as isize;
+
+            let x = if x >= cols {
+                x - cols
+            } else if x < 0 {
+                cols + x
+            } else {
+                x
+            };
+            let y = if y >= rows {
+                y - rows
+            } else if y < 0 {
+                rows + y
+            } else {
+                y
+            };
+
+            grid[(y as usize, x as usize)]
+        }
     }
 }
