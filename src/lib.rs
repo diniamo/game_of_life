@@ -25,7 +25,7 @@ pub fn parse_goln(goln: &str) -> Grid<bool> {
         .unwrap();
 
     let mut grid = Grid::new(h, w);
-    lines.next().unwrap().split(';').for_each(|cell| {
+    lines.for_each(|cell| {
         let (x, y) = cell.split_once(',').map(map_split_once_to_usize).unwrap();
         grid[(y, x)] = true
     });

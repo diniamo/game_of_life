@@ -1,160 +1,137 @@
 #![allow(clippy::absurd_extreme_comparisons)]
 
-use std::time::{Duration, Instant};
-
 use game_of_life::{parse_goln, random_grid, res, step, EdgeCaseMethod};
 use grid::Grid;
-use sdl2::keyboard::Keycode;
-use sdl2::rect::Rect;
-use sdl2::render::{Canvas, Texture};
-use sdl2::video::Window;
-use sdl2::{event::Event, pixels::Color};
+use raylib::{
+    color::Color, consts::KeyboardKey, drawing::RaylibTextureModeExt, ffi::TraceLogLevel,
+    prelude::RaylibDraw, texture::RenderTexture2D, RaylibHandle, RaylibThread,
+};
+use std::{
+    thread::sleep,
+    time::{Duration, Instant},
+};
+
+const FPS: u64 = 30;
+const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
 
 const RANDOM_GRID: bool = false;
 const RG_WIDTH: usize = 80;
 const RG_HEIGHT: usize = 60;
 
-const BORDER_SIZE: u32 = 1;
-const BORDER_SIZE_I: i32 = BORDER_SIZE as i32;
-const PIXEL_SIZE: u32 = 10;
-const PIXEL_SIZE_I: i32 = PIXEL_SIZE as i32;
+const BORDER_SIZE: i32 = 1;
+const PIXEL_SIZE: i32 = 10;
 
-const EDGE_CASE_METHOD: EdgeCaseMethod = EdgeCaseMethod::Torodial;
-
-const UPDATE_INTERVAL: Duration = Duration::from_millis(1000);
+const EDGE_CASE_METHOD: EdgeCaseMethod = EdgeCaseMethod::AssumeDead;
 
 fn main() {
     let mut grid = if RANDOM_GRID {
         random_grid(RG_WIDTH, RG_HEIGHT)
     } else {
-        parse_goln(res::CROSSHAIR)
+        parse_goln(res::GOSPER_GLIDER_GUN)
     };
     let mut last_update = Instant::now();
 
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
-
-    let cols = grid.cols() as u32;
-    let rows = grid.rows() as u32;
+    let cols = grid.cols() as i32;
+    let rows = grid.rows() as i32;
     let width = cols * PIXEL_SIZE + cols * BORDER_SIZE + BORDER_SIZE;
     let height = rows * PIXEL_SIZE + rows * BORDER_SIZE + BORDER_SIZE;
-    let window = video_subsystem
-        .window("Game of Life", width, height)
-        .position_centered()
-        .build()
-        .unwrap();
 
-    let mut canvas = window.into_canvas().build().unwrap();
+    let (mut rl, thread) = raylib::init()
+        // What? The window is exactly 37 pixels taller than it should be for some reason.
+        // This doesn't happen on the SDL backend, but the Rust bindings don't seem to support that(?).
+        .size(width, height - 37)
+        .log_level(TraceLogLevel::LOG_ERROR)
+        .title("Game of Life")
+        .build();
 
-    let texture_creator = canvas.texture_creator();
-    let mut border_texture = texture_creator
-        .create_texture_target(None, width, height)
-        .unwrap();
-    draw_border(&mut canvas, &mut border_texture, cols + 1, rows + 1);
-
-    canvas.set_draw_color(Color::WHITE);
-    do_draw(&mut canvas, &border_texture, &grid).expect("Failed first draw, terminating");
+    let border_buffer = render_border(&mut rl, &thread, width, height, cols + 1, rows + 1);
 
     let mut paused = false;
-    let mut event_pump = sdl_context.event_pump().unwrap();
-    'game_loop: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape | Keycode::Q),
-                    ..
-                } => break 'game_loop,
-                Event::KeyDown {
-                    keycode: Some(Keycode::Space),
-                    ..
-                } => paused = !paused,
-                _ => {}
-            }
+    while !rl.window_should_close() && !rl.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
+        if rl.is_key_pressed(KeyboardKey::KEY_SPACE) {
+            paused = !paused;
         }
 
         if !paused && last_update.elapsed() >= UPDATE_INTERVAL && step(&mut grid, &EDGE_CASE_METHOD)
         {
-            if let Err(e) = do_draw(&mut canvas, &border_texture, &grid) {
-                println!("Failed to draw, terminating: {e}");
-                break 'game_loop;
-            }
-
+            do_draw(&mut rl, &thread, &border_buffer, &grid);
             last_update = Instant::now();
         }
 
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30))
+        sleep(Duration::from_nanos(1_000_000_000 / FPS))
     }
 }
 
 fn do_draw(
-    canvas: &mut Canvas<Window>,
-    border_texture: &Texture,
+    rl: &mut RaylibHandle,
+    thread: &RaylibThread,
+    border_buffer: &Option<RenderTexture2D>,
     grid: &Grid<bool>,
-) -> Result<(), String> {
-    if BORDER_SIZE > 0 {
-        canvas.copy(border_texture, None, None)?;
-    } else {
-        canvas.set_draw_color(Color::WHITE);
-        canvas.clear();
+) {
+    let mut d = rl.begin_drawing(thread);
+
+    d.clear_background(Color::WHITE);
+
+    if let Some(border_buffer) = border_buffer {
+        d.draw_texture(border_buffer, 0, 0, Color::WHITE);
     }
 
-    canvas.set_draw_color(Color::BLACK);
     for ((y, x), cell) in grid.indexed_iter() {
         let x = x as i32;
         let y = y as i32;
 
         if *cell {
-            canvas.fill_rect(Rect::new(
-                x * PIXEL_SIZE_I + x * BORDER_SIZE_I + BORDER_SIZE_I,
-                y * PIXEL_SIZE_I + y * BORDER_SIZE_I + BORDER_SIZE_I,
+            d.draw_rectangle(
+                x * PIXEL_SIZE + x * BORDER_SIZE + BORDER_SIZE,
+                y * PIXEL_SIZE + y * BORDER_SIZE + BORDER_SIZE,
                 PIXEL_SIZE,
                 PIXEL_SIZE,
-            ))?;
+                Color::BLACK,
+            );
         }
     }
-
-    canvas.present();
-    Ok(())
 }
 
-fn draw_border(
-    canvas: &mut Canvas<Window>,
-    texture: &mut Texture,
-    vertical_lines: u32,
-    horizontal_lines: u32,
-) {
+fn render_border(
+    rl: &mut RaylibHandle,
+    thread: &RaylibThread,
+    width: i32,
+    height: i32,
+    vertical_lines: i32,
+    horizontal_lines: i32,
+) -> Option<RenderTexture2D> {
     if BORDER_SIZE > 0 {
-        let (w, h) = canvas.window().size();
+        let mut buffer = rl
+            .load_render_texture(thread, width as u32, height as u32)
+            .ok()?;
 
-        canvas
-            .with_texture_canvas(texture, |texture_canvas| {
-                texture_canvas.set_draw_color(Color::WHITE);
-                texture_canvas.clear();
-                texture_canvas.set_draw_color(Color::GRAY);
+        let mut d = rl.begin_drawing(thread);
+        let mut d = d.begin_texture_mode(thread, &mut buffer);
 
-                for i in 0..vertical_lines {
-                    texture_canvas
-                        .fill_rect(Rect::new(
-                            i as i32 * (BORDER_SIZE + PIXEL_SIZE) as i32,
-                            0,
-                            BORDER_SIZE,
-                            h,
-                        ))
-                        .unwrap();
-                }
+        for i in 0..vertical_lines {
+            d.draw_rectangle(
+                i * (BORDER_SIZE + PIXEL_SIZE),
+                0,
+                BORDER_SIZE,
+                height,
+                Color::BLACK,
+            )
+        }
 
-                for i in 0..horizontal_lines {
-                    texture_canvas
-                        .fill_rect(Rect::new(
-                            0,
-                            i as i32 * (BORDER_SIZE + PIXEL_SIZE) as i32,
-                            w,
-                            BORDER_SIZE,
-                        ))
-                        .unwrap();
-                }
-            })
-            .unwrap();
+        for i in 0..horizontal_lines {
+            d.draw_rectangle(
+                0,
+                i * (BORDER_SIZE + PIXEL_SIZE),
+                width,
+                BORDER_SIZE,
+                Color::BLACK,
+            );
+        }
+
+        drop(d);
+
+        Some(buffer)
+    } else {
+        None
     }
 }

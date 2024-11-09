@@ -4,9 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-grid = "0.13.0"
+grid = "0.15.0"
 rand = "0.8.5"
-
-[dependencies.sdl2]
-version = "0.36.0"
-features = ["bundled", "use-pkgconfig"]
+raylib = {version = "5.0.2", features = ["wayland"]}
