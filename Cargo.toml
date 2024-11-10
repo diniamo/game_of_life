@@ -6,4 +6,7 @@ edition = "2021"
 [dependencies]
 grid = "0.15.0"
 rand = "0.8.5"
-raylib = {version = "5.0.2", features = ["wayland"]}
+
+[dependencies.raylib]
+version = "5.0.2"
+features = ["wayland", "custom_frame_control"]

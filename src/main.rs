@@ -11,7 +11,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const FPS: u64 = 30;
+const SLEEP_DURATION: Duration = Duration::from_nanos(1_000_000_000 / 30);
 const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
 
 const RANDOM_GRID: bool = false;
@@ -47,7 +47,9 @@ fn main() {
     let border_buffer = render_border(&mut rl, &thread, width, height, cols + 1, rows + 1);
 
     let mut paused = false;
-    while !rl.window_should_close() && !rl.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
+    while !rl.window_should_close() {
+        rl.poll_input_events();
+
         if rl.is_key_pressed(KeyboardKey::KEY_SPACE) {
             paused = !paused;
         }
@@ -58,7 +60,7 @@ fn main() {
             last_update = Instant::now();
         }
 
-        sleep(Duration::from_nanos(1_000_000_000 / FPS))
+        sleep(SLEEP_DURATION);
     }
 }
 
